@@ -10,7 +10,8 @@ export const signup = async (req, res) => {
 		if (!fullName || !email || !password) {
 			return res.status(400).json({ message: 'All fields are required' });
 		}
-		if (password < 6) {
+
+		if (password.length < 6) {
 			return res.status(400).json({ message: 'Passwrod must be at least 6 characters' });
 		}
 
@@ -48,10 +49,38 @@ export const signup = async (req, res) => {
 	}
 };
 
-export const login = (req, res) => {
-	res.send('login route');
+export const login = async (req, res) => {
+	const { email, password } = res.body();
+	try {
+		const user = await user.findOne({ email });
+		if (!user) {
+			res.status(400).json({ message: 'Invalid credentials' });
+		}
+
+		const isPasswordCorrect = bcryptjs.compare(password, user.password);
+		if (!password) {
+			res.status(400).json({ message: 'Invalid credentials' });
+		}
+
+		generateToken(user._id, res);
+		res.status(200).json({
+			_id: user._id,
+			fullName: user.fullName,
+			email: user.email,
+			profilePic: user.profilePic,
+		});
+	} catch (error) {
+		console.log('Error in login controller');
+		res.status(500).json({ message: 'Internal server error' });
+	}
 };
 
 export const logout = (req, res) => {
-	res.send('logout route');
+	try {
+		res.cookie('jwt', '', { maxAge: 0 });
+		res.status(200).json({ message: 'Loggeout successfully' });
+	} catch (error) {
+		console.log('Error in logout controller', error.message);
+		res.status(500).json({ message: 'Internal server error' });
+	}
 };
